@@ -12,10 +12,17 @@ loop do
   request_line = request.split(" ")[1]
   puts "Request Line: #{request_line}"
 
-  if request_line == "/"
+  split_request_line = request_line.split("/")
+  puts "Split Request Line: #{split_request_line}"
+
+  if split_request_line.empty?
     response = "HTTP/1.1 200 OK\r\n\r\n"
     puts "OK Response: #{response}"
-  else 
+  elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
+    text= split_request_line.last
+    response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
+    puts response
+  else
     response = "HTTP/1.1 404 Not Found\r\n\r\n"
     puts "Bad Response: #{response}"
   end
