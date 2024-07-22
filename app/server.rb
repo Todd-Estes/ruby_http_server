@@ -15,9 +15,20 @@ loop do
   split_request_line = request_line.split("/")
   puts "Split Request Line: #{split_request_line}"
 
+  while line = client_socket.gets
+    break if line == "\r\n"
+    if line.start_with?("User-Agent")
+      user_agent_value = line.split(" ").last
+    end
+  end    
+
+
   if split_request_line.empty?
     response = "HTTP/1.1 200 OK\r\n\r\n"
     puts "OK Response: #{response}"
+  elsif split_request_line[1] == "user-agent"
+    response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{user_agent_value.length}\r\n\r\n#{user_agent_value}"
+    puts "/user-agent endpoint response: #{response}"
   elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
     text= split_request_line.last
     response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
@@ -30,3 +41,4 @@ loop do
   client_socket.puts response
   client_socket.close
 end
+
