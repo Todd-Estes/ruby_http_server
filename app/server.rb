@@ -1,5 +1,5 @@
 require "socket"
-
+# run this w/ ruby app/server.rb --directory /tmp/
 # run w/ curl http://localhost:4221
 server = TCPServer.new("localhost", 4221)
 
@@ -31,11 +31,24 @@ loop do
       text= split_request_line.last
       response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
       puts response
-    elsif split_request_line[1] == "files" && split_request_line[2] == "foo"
-      file_size = File.new("/tmp/foo").size
-      file_content = IO.binread("/tmp/foo")
-      response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: #{file_size}\r\n\r\n#{file_content}!"
-      puts response
+    elsif split_request_line[1] == "files"
+      puts "ARGV: #{ARGV[1]}"
+      file_name = split_request_line[2]
+      file_path =  "#{ARGV[1]}"
+      puts "FILE NAME: #{file_name}"
+      puts "#{file_path}#{file_name}"
+      if File.file?("#{file_path}#{file_name}")
+        puts "YELLO"
+        begin
+          file_content = File.read("#{file_path}#{file_name}")
+          response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: #{file_content.length}\r\n\r\n#{file_content}!"
+        rescue
+          client_socket.puts "HTTP/1.1 404 Not Found\r\n\r\n"
+        end
+      else
+        puts 'NO FILE'
+        response = "HTTP/1.1 404 Not Found\r\n\r\n"
+      end
     else
       response = "HTTP/1.1 404 Not Found\r\n\r\n"
       puts "Bad Response: #{response}"
