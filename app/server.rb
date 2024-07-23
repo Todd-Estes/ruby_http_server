@@ -8,26 +8,24 @@ loop do
     request = client_socket.gets.chomp
     puts "Received Request: #{request}"
 
-    request_method, request_line, _ = request_line = request.split(" ")
+    request_method, request_line, _ = request.split(" ")
     puts "Request Method: #{request_method}"
     puts "Request Line: #{request_line}"
 
     split_request_line = request_line.split("/")
     puts "Split Request Line: #{split_request_line}"
 
+    # create request headers hash
+    request_headers = {} 
     while line = client_socket.gets
-      puts line
       break if line == "\r\n"
-      if line.start_with?("User-Agent")
-        user_agent_value = line.split(" ").last
-      end
-      if line.start_with?("Content-Length")
-        content_length_value = line.split(" ").last.to_i
-      end
+      header_key, header_value = line.split(": ")
+      request_headers[header_key] = header_value
     end    
 
     if request_method == "POST"
-      body = client_socket.read(content_length_value)
+      puts headers
+      body = client_socket.read(request_headers["Content-Length"].to_i)
       puts "Request Body: #{body}"
       file_path =  ARGV[1]
       file_name = split_request_line[2]
@@ -40,6 +38,7 @@ loop do
       response = "HTTP/1.1 200 OK\r\n\r\n"
       puts "OK Response: #{response}"
     elsif split_request_line[1] == "user-agent"
+      user_agent_value = request_headers["User-Agent"]
       response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{user_agent_value.length}\r\n\r\n#{user_agent_value}"
       puts "/user-agent endpoint response: #{response}"
     elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
