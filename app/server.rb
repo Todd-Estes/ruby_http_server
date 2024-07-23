@@ -2,6 +2,7 @@ require "socket"
 # run this w/ ruby app/server.rb --directory /tmp/
 # run w/ curl http://localhost:4221
 server = TCPServer.new("localhost", 4221)
+compression_schemes = ["gzip", "foo"]
 
 loop do
   Thread.start(server.accept) do |client_socket, client_address| 
@@ -20,11 +21,12 @@ loop do
     while line = client_socket.gets
       break if line == "\r\n"
       header_key, header_value = line.split(": ")
-      request_headers[header_key] = header_value
+      request_headers[header_key] = header_value.strip
     end    
+    puts request_headers
 
     if request_method == "POST"
-      puts headers
+      puts request_headers
       body = client_socket.read(request_headers["Content-Length"].to_i)
       puts "Request Body: #{body}"
       file_path =  ARGV[1]
@@ -42,9 +44,20 @@ loop do
       response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{user_agent_value.length}\r\n\r\n#{user_agent_value}"
       puts "/user-agent endpoint response: #{response}"
     elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
-      text= split_request_line.last
-      response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
-      puts response
+      client_encoding = request_headers["Accept-Encoding"]
+      if client_encoding
+        if compression_schemes.include?(client_encoding)
+          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: #{client_encoding}\r\n\r\n"
+          puts response
+        else
+          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"
+          puts response
+        end
+      else
+        text= split_request_line.last
+        response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
+        puts response
+      end
     elsif split_request_line[1] == "files"
       puts "ARGV: #{ARGV[1]}"
       file_name = split_request_line[2]
@@ -72,4 +85,3 @@ loop do
     client_socket.close
   end
 end
-
