@@ -20,8 +20,7 @@ loop do
         user_agent_value = line.split(" ").last
       end
     end    
-
-
+    
     if split_request_line.empty?
       response = "HTTP/1.1 200 OK\r\n\r\n"
       puts "OK Response: #{response}"
@@ -31,6 +30,11 @@ loop do
     elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
       text= split_request_line.last
       response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
+      puts response
+    elsif split_request_line[1] == "files" && split_request_line[2] == "foo"
+      file_size = File.new("/tmp/foo").size
+      file_content = IO.binread("/tmp/foo")
+      response = "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: #{file_size}\r\n\r\n#{file_content}!"
       puts response
     else
       response = "HTTP/1.1 404 Not Found\r\n\r\n"
