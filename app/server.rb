@@ -2,7 +2,12 @@ require "socket"
 # run this w/ ruby app/server.rb --directory /tmp/
 # run w/ curl http://localhost:4221
 server = TCPServer.new("localhost", 4221)
-compression_schemes = ["gzip", "foo"]
+server_compression_schemes = ["gzip"]
+
+def supported_client_encoding(server_compression_schemes, client_encoding_string)
+  client_encodings = client_encoding_string.split(", ")
+  server_compression_schemes.detect { |scheme| client_encodings.include?(scheme) }
+end
 
 loop do
   Thread.start(server.accept) do |client_socket, client_address| 
@@ -46,8 +51,10 @@ loop do
     elsif split_request_line[1] == "echo" && !split_request_line[2].empty?
       client_encoding = request_headers["Accept-Encoding"]
       if client_encoding
-        if compression_schemes.include?(client_encoding)
-          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: #{client_encoding}\r\n\r\n"
+        supported_client_encoding = supported_client_encoding(server_compression_schemes, client_encoding)
+        puts "supported_client_encoding: #{supported_client_encoding}"
+        if supported_client_encoding
+          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: #{supported_client_encoding}\r\n\r\n"
           puts response
         else
           response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"
@@ -85,3 +92,4 @@ loop do
     client_socket.close
   end
 end
+
