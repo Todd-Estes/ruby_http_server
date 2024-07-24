@@ -1,4 +1,6 @@
 require "socket"
+require "zlib"
+require "stringio"
 # run this w/ ruby app/server.rb --directory /tmp/
 # run w/ curl http://localhost:4221
 server = TCPServer.new("localhost", 4221)
@@ -7,6 +9,14 @@ server_compression_schemes = ["gzip"]
 def supported_client_encoding(server_compression_schemes, client_encoding_string)
   client_encodings = client_encoding_string.split(", ")
   server_compression_schemes.detect { |scheme| client_encodings.include?(scheme) }
+end
+
+def gzip(string)
+  string_io = StringIO.new
+  Zlib::GzipWriter.wrap(string_io) do |gz|
+    gz.write(string)
+  end
+  string_io.string
 end
 
 loop do
@@ -54,14 +64,16 @@ loop do
         supported_client_encoding = supported_client_encoding(server_compression_schemes, client_encoding)
         puts "supported_client_encoding: #{supported_client_encoding}"
         if supported_client_encoding
-          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: #{supported_client_encoding}\r\n\r\n"
+          compressed_string = gzip(split_request_line.last.strip)
+          puts compressed_string
+          response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Encoding: #{supported_client_encoding}\r\nContent-Length: #{compressed_string.length}\r\n\r\n#{compressed_string}"
           puts response
         else
           response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n"
           puts response
         end
       else
-        text= split_request_line.last
+        text = split_request_line.last
         response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: #{text.length}\r\n\r\n#{text}"
         puts response
       end
